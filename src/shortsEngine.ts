@@ -1,5 +1,5 @@
 import {
-  DEFAULT_PARAMS, empiricalStats, makeHistogram, simulate, theoreticalStats,
+  DEFAULT_PARAMS, empiricalStats, makeHistogram, simulate, tailSurvival, theoreticalStats,
   type LabKind, type LabParams, type Trial
 } from "./simulations";
 

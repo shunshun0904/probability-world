@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   DEFAULT_PARAMS, MAX_TRIALS, empiricalStats, makeHistogram, simulate, tailSurvival,
   theoreticalStats, type LabKind, type LabParams, type Trial
@@ -147,7 +147,7 @@ export default function PhenomenaLab({kind}: {kind:LabKind}) {
   const actual=useMemo(()=>empiricalStats(trials),[trials]);
   const tailFrequency=kind==="tails" && trials.length ? trials.filter(trial=>trial.value>=300).length/trials.length:0;
   const replayText=trials.length===0 ? "まだ実験を始めていません。最初のセットを実行してみましょう。" : trials.length<100 ? "試行回数が少ない間は、実測値と理論値に差が出ます。もっと繰り返してみましょう。" : "たくさん繰り返すと、実測分布は理論上の形に近づく傾向があります。毎回の結果が予測できるわけではありません。";
-  return <div className={"ph-page"+(videoMode?" ph-videoMode":"")} style={{"--ph-accent":config.color} as React.CSSProperties}>
+  return <div className={"ph-page"+(videoMode?" ph-videoMode":"")} style={{"--ph-accent":config.color} as CSSProperties}>
     <header className="ph-header"><a href={window.location.pathname} className="ph-logo">◈ <strong>確率の世界</strong><span>PROBABILITY WORLD</span></a><div className="ph-headerActions"><a href={window.location.pathname+"#phenomena"}>← 実験一覧に戻る</a><button type="button" onClick={()=>setVideoMode(v=>!v)} aria-pressed={videoMode}>{videoMode?"通常表示に戻す":"▣ 動画素材モード"}</button></div></header>
     <main><section className="ph-intro"><div className="ph-introText"><span className="ph-eyebrow">EXPERIMENT LAB　/　{String(LAB_ORDER.indexOf(kind)+1).padStart(2,"0")}</span><h1>{config.phenomenon}</h1><p>{config.intro}</p><span className="ph-formula">{config.formula}</span></div><div className="ph-introSymbol" aria-hidden="true">{config.symbol}</div></section>
       <div className="ph-content"><div className="ph-labHeader"><div><span className="ph-overline">SIMULATE & DISCOVER</span><h2>{config.title}</h2><p>{config.hint}</p></div><div className="ph-runningIndicator"><span className={running?"ph-pulse":""}/> {running?"RUNNING":"INTERACTIVE"}</div></div>

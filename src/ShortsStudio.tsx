@@ -4,7 +4,7 @@ import {
   VIDEO_HEIGHT, VIDEO_WIDTH, type VideoDuration
 } from "./shortsEngine";
 import { createVideoExport, triggerDownload, type RecordedShort, type VideoExportTask } from "./shortsRecorder";
-import { parseStudioQuery, studioUrl } from "./shortsRoutes";
+import { parseStudioQuery, parseStudioSeed, studioUrl } from "./shortsRoutes";
 import { DEFAULT_PARAMS, type LabKind, type LabParams } from "./simulations";
 import { LAB_ORDER } from "./shortsEngine";
 import "./shortsStudio.css";
@@ -24,7 +24,7 @@ export default function ShortsStudio(){
   const initial=useMemo(()=>parseStudioQuery(window.location.search),[]);
   const [kind,setKind]=useState<LabKind>(initial.kind);
   const [params,setParams]=useState<LabParams>(initial.params);
-  const [seed,setSeed]=useState(20261025);
+  const [seed,setSeed]=useState(()=>parseStudioSeed(window.location.search));
   const [duration,setDuration]=useState<VideoDuration>(30);
   const [seconds,setSeconds]=useState(0);
   const [playing,setPlaying]=useState(false);
@@ -33,6 +33,7 @@ export default function ShortsStudio(){
   const [output,setOutput]=useState<RecordedShort|null>(null);
   const [videoUrl,setVideoUrl]=useState("");
   const [error,setError]=useState("");
+  const [notice,setNotice]=useState("");
   const [showScript,setShowScript]=useState(false);
   const canvas=useRef<HTMLCanvasElement|null>(null);
   const task=useRef<VideoExportTask|null>(null);
@@ -98,7 +99,7 @@ export default function ShortsStudio(){
       setError(failure instanceof Error?failure.message:"動画の作成に失敗しました。");
     }
   }
-  const ctaParams=studioUrl(kind,params);
+  const ctaParams=studioUrl(kind,params,seed);
   const filename="probability-world-"+kind+"-"+duration+"s-script.txt";
   return <div className="sv-page">
     <header className="sv-header"><a className="sv-brand" href={window.location.pathname}>◈ <strong>確率の世界</strong><small>PROBABILITY WORLD</small></a><nav><a href={window.location.pathname+"#phenomena"}>← 実験一覧</a><a href={"?lab="+kind}>元の実験へ ↗</a></nav></header>
@@ -119,7 +120,7 @@ export default function ShortsStudio(){
             <div className="sv-exportFoot">ブラウザの録画機能で生成します。MP4に対応していないブラウザではWebM形式になります。YouTubeへの投稿は手動です。</div>
           </section></aside></div>
       <section className="sv-scriptSection"><div><span className="sv-overline">04 / STORYBOARD & SCRIPT</span><h2>台本も、一緒に。</h2><p>今選んでいる現象と実験条件に合わせた、ショート動画の構成です。</p><div className="sv-scriptButtons"><button onClick={()=>setShowScript(value=>!value)}>{showScript?"台本を閉じる":"台本を表示する"}</button><button onClick={()=>triggerDownload(new Blob([script],{type:"text/plain;charset=utf-8"}),filename)}>↓ 台本テキストを保存</button></div></div><div className="sv-storyCards"><div><span>SCENE 01 / QUESTION</span><strong>{story.script.hook}</strong></div><div><span>SCENE 02 / EXPERIMENT</span><strong>{story.script.action}</strong></div><div><span>SCENE 03 / DISTRIBUTION</span><strong>600セットの実測結果と理論分布を比較</strong></div><div><span>SCENE 04 / DISCOVERY</span><strong>{story.script.insight}</strong></div></div>{showScript&&<pre className="sv-scriptText">{script}</pre>}</section>
-      <div className="sv-share"><div><strong>同じ設定で動画を作り直せます</strong><span>このURLに実験のパラメータを含めています。</span></div><button onClick={()=>navigator.clipboard.writeText(window.location.origin+window.location.pathname+ctaParams).then(()=>setError("URLをコピーしました。")).catch(()=>setError("コピーできませんでした。URLをアドレスバーからコピーしてください。"))}>共有用URLをコピー ↗</button></div>
+      <div className="sv-share"><div><strong>同じ設定で動画を作り直せます</strong><span>このURLに実験のパラメータを含めています。</span></div><button onClick={()=>navigator.clipboard.writeText(window.location.origin+window.location.pathname+ctaParams).then(()=>{setError("");setNotice("共有URLをコピーしました。");}).catch(()=>setError("コピーできませんでした。URLをアドレスバーからコピーしてください。"))}>共有用URLをコピー ↗</button>{notice&&<span className="sv-copied" role="status">{notice}</span>}</div>
     </main><footer className="sv-footer"><a href={window.location.pathname}>◈ 確率の世界</a><span>現象から学び、世界に伝える。</span></footer>
   </div>;
 }

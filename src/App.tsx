@@ -1,72 +1,59 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { deviation, frequencies, rollDie, summarize, THEORETICAL } from "./probability";
+import { useMemo, useState } from "react";
+import DiceLab from "./DiceLab";
 
-const FACES = ["⚀","⚁","⚂","⚃","⚄","⚅"];
-const PERCENT = (value: number) => (value * 100).toFixed(1) + "%";
-const MAX_ROLLS = 100000;
-const OPTIONS = [1, 10, 100, 1000];
-type Point = { n: number; error: number };
-
-export default function App() {
-  const [rolls, setRolls] = useState<number[]>([]);
-  const [history, setHistory] = useState<Point[]>([]);
-  const [running, setRunning] = useState(false);
-  const [batch, setBatch] = useState(100);
-  const rollsRef = useRef(rolls);
-  const historyRef = useRef(history);
-  rollsRef.current = rolls;
-  historyRef.current = history;
-  const counts = useMemo(() => summarize(rolls), [rolls]);
-  const frequency = useMemo(() => frequencies(counts), [counts]);
-  const error = deviation(counts);
-  const latest = rolls.at(-1);
-  const addRolls = useCallback((amount: number) => {
-    const current = rollsRef.current;
-    const space = Math.max(0, MAX_ROLLS - current.length);
-    const actual = Math.min(amount, space);
-    if (!actual) return;
-    const added = Array.from({ length: actual }, rollDie);
-    const next = [...current, ...added];
-    const nextCounts = summarize(current);
-    const points = [...historyRef.current];
-    // Record error every 10 rolls and at the end, keeping at most 500 points.
-    for (let i = 0; i < added.length; i++) {
-      nextCounts[added[i] - 1]++;
-      const n = current.length + i + 1;
-      if (n <= 10 || n % 10 === 0 || i === added.length - 1) {
-        points.push({ n, error: deviation(nextCounts) });
-      }
-    }
-    const trimmed = points.length <= 500 ? points : points.filter((_, index) => index % Math.ceil(points.length / 500) === 0 || index === points.length - 1);
-    rollsRef.current = next;
-    historyRef.current = trimmed;
-    setRolls(next);
-    setHistory(trimmed);
-    if (next.length >= MAX_ROLLS) setRunning(false);
-  }, []);
-  useEffect(() => {
-    if (!running) return;
-    const id = window.setInterval(() => addRolls(batch), 160);
-    return () => window.clearInterval(id);
-  }, [running, batch, addRolls]);
-  const reset = () => { setRunning(false); rollsRef.current = []; historyRef.current = []; setRolls([]); setHistory([]); };
-  const displayMax = Math.max(0.25, ...frequency) * 1.08;
-  const trace = history.length > 0 ? history.map((p, index) => {
-    const x = 12 + (index / Math.max(1, history.length - 1)) * 656;
-    const y = 168 - Math.min(p.error / 0.85, 1) * 148;
-    return (index ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
-  }).join(" ") : "";
-
-  return <div className="site">
-    <header className="topbar"><a href="#home" className="brand"><span className="brandmark">◈</span> 確率の世界 <span className="brandEnglish">PROBABILITY WORLD</span></a><nav aria-label="メインナビゲーション"><a href="#experiment">実験する</a><a href="#learn">学ぶ</a></nav></header>
-    <main id="home">
-      <section className="hero"><div className="heroInner"><div className="eyebrow"><span className="sparkle">✦</span> THE BEAUTY OF RANDOMNESS</div><h1>偶然のなかに、<br/><em>法則</em>を見つけよう。</h1><p>確率を、見て・動かして・発見する。<br/>難しい数式より先に、まずはサイコロを振ってみよう。</p><a className="heroButton" href="#experiment">さっそく実験する <span aria-hidden="true">↗</span></a><div className="heroDeco" aria-hidden="true"><div className="orbit orbitOne"></div><div className="orbit orbitTwo"></div><span className="bigDice">⚄</span><span className="diceSmall diceA">⚂</span><span className="diceSmall diceB">⚅</span></div></div></section>
-      <section className="experimentWrap" id="experiment"><div className="sectionLabel">01 / INTERACTIVE LAB</div><div className="sectionHeading"><div><h2>サイコロ実験室</h2><p>6つの目は、本当に同じ確率で出るのでしょうか？</p></div><span className="livePill"><span className="liveDot"></span> INTERACTIVE</span></div>
-        <div className="experimentGrid"><section className="card controlCard"><div className="cardOverline">ROLL THE DICE</div><div className="die" aria-label={latest ? "直近の出目 " + latest : "まだサイコロを振っていません"}>{latest ? FACES[latest - 1] : "⚄"}</div><div className="resultLabel">{latest ? "最後に出た目：" + latest : "準備はいいですか？"}</div><div className="stats"><div><strong>{rolls.length.toLocaleString("ja-JP")}</strong><span>試行回数</span></div><div><strong>{PERCENT(error)}</strong><span>最大誤差</span></div></div><div className="controlLabel">一度に振る回数</div><div className="batchOptions" role="group" aria-label="一度に振る回数">{OPTIONS.map(option => <button key={option} className={batch === option ? "selected" : ""} onClick={() => setBatch(option)} aria-pressed={batch === option}>{option.toLocaleString()}</button>)}</div><button className="primaryButton" onClick={() => addRolls(batch)} disabled={rolls.length >= MAX_ROLLS}>サイコロを {batch.toLocaleString()} 回振る <span>↗</span></button><button className="secondaryButton" onClick={() => setRunning(current => !current)} disabled={rolls.length >= MAX_ROLLS}>{running ? "Ⅱ  自動実験を停止" : "▶  自動で振り続ける"}</button><button className="resetButton" onClick={reset} disabled={!rolls.length}>↺ 実験をリセット</button><p className="limitNote">最大 {MAX_ROLLS.toLocaleString()} 回まで試行できます。</p></section>
-          <section className="card chartCard"><div className="cardTitle"><div><div className="cardOverline">OBSERVED VS. EXPECTED</div><h3>出目の確率を比べよう</h3></div><div className="legend"><span><i className="legendObserved"></i> 実測値</span><span><i className="legendExpected"></i> 理論値（16.7%）</span></div></div><div className="barChart" role="img" aria-label="1から6の出目の相対度数と理論確率の棒グラフ">{frequency.map((value, index) => <div className="barColumn" key={index}><div className="barPlot"><div className="theoryLine" style={{bottom: (THEORETICAL / displayMax * 100) + "%"}}></div><div className="bar" style={{height: (value / displayMax * 100) + "%"}}></div></div><strong>{index + 1}</strong><small>{PERCENT(value)}</small></div>)}</div><div className="chartBottom"><span>6つの目の相対度数</span><span>理論確率：1/6 ≒ 16.7%</span></div><div className="insight"><span className="insightIcon">✦</span><p>{rolls.length === 0 ? "サイコロを振ると、ここに実験結果が表示されます。" : rolls.length < 30 ? "まだ試行回数が少ないので、出目にばらつきが見られます。回数を増やしてみましょう。" : "試行回数を増やすと、各出目の相対度数は理論値の約16.7%に近づく傾向があります。ただし毎回ぴったり一致するわけではありません。"}</p></div></section></div>
-        <section className="card convergenceCard"><div className="cardTitle"><div><div className="cardOverline">THE LAW OF LARGE NUMBERS</div><h3>試行を重ねると、誤差はどうなる？</h3></div><span className="tag">大数の法則</span></div><p className="convergenceIntro">6つの出目について「相対度数と理論確率の差」の最大値を追跡します。試行回数が増えるほど、誤差は小さくなる傾向があります。</p><div className="lineChart" role="img" aria-label="試行回数に対する最大誤差の推移"><svg viewBox="0 0 680 200" preserveAspectRatio="none" aria-hidden="true"><line x1="12" x2="668" y1="168" y2="168" stroke="#c9d3df"/><line x1="12" x2="668" y1="95" y2="95" stroke="#e5eaf0" strokeDasharray="5 5"/><line x1="12" x2="668" y1="20" y2="20" stroke="#e5eaf0" strokeDasharray="5 5"/>{trace && <path d={trace} fill="none" stroke="#3867f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>}</svg>{history.length === 0 && <div className="emptyChart">実験を始めるとグラフが描かれます</div>}</div><div className="axisLabels"><span>1 回</span><span>試行回数 →</span><span>{rolls.length.toLocaleString()} 回</span></div></section>
-      </section>
-      <section className="learn" id="learn"><div className="sectionLabel">02 / DISCOVER THE IDEA</div><h2>数字が語る、<br/><em>おもしろい法則。</em></h2><div className="learnCards"><article><span className="learnNumber">01</span><h3>理論確率</h3><p>公平なサイコロでは、どの目も出る確率は 1/6。振る前に考えられる確率です。</p></article><article><span className="learnNumber">02</span><h3>相対度数</h3><p>実際に出た割合のこと。「1の目が出た回数 ÷ 全試行回数」で計算します。</p></article><article><span className="learnNumber">03</span><h3>大数の法則</h3><p>試行回数を十分に増やすと、相対度数は理論確率へ近づいていきます。</p></article></div></section>
-    </main><footer><span>◈ 確率の世界</span><span>確率を、見て・動かして・発見する。</span></footer>
-  </div>;
+type Dist = "binomial" | "normal" | "poisson" | "uniform";
+const distributionInfo: Record<Dist, { name: string; subtitle: string; formula: string; description: string; color: string }> = {
+  binomial: { name: "二項分布", subtitle: "BINOMIAL DISTRIBUTION", formula: "X ~ B(n, p)", description: "成功・失敗の2通りの結果を何度も繰り返すとき、成功回数にはどんな法則があるのでしょう。", color: "#5b6fe9" },
+  normal: { name: "正規分布", subtitle: "NORMAL DISTRIBUTION", formula: "X ~ N(μ, σ²)", description: "身長や測定誤差など、多くの現象で現れる左右対称の釣り鐘型の分布です。", color: "#13a59a" },
+  poisson: { name: "ポアソン分布", subtitle: "POISSON DISTRIBUTION", formula: "X ~ Poisson(λ)", description: "一定時間に何件起きるか。まれな出来事の回数を考えるための分布です。", color: "#e59c48" },
+  uniform: { name: "一様分布", subtitle: "UNIFORM DISTRIBUTION", formula: "X ~ U(a, b)", description: "ある区間のどの値も同じ密度で現れる、シンプルで重要な確率分布です。", color: "#b27bd3" }
+};
+const factorial = (n: number) => { let result = 1; for (let i = 2; i <= n; i++) result *= i; return result; };
+const choose = (n: number, k: number) => { let result = 1; for (let i = 1; i <= k; i++) result = result * (n - i + 1) / i; return result; };
+function points(type: Dist, n: number, p: number, mu: number, sigma: number, lambda: number) {
+  if (type === "binomial") return Array.from({ length: n + 1 }, (_, k) => ({ x: k, y: choose(n, k) * p ** k * (1 - p) ** (n - k) }));
+  if (type === "poisson") return Array.from({ length: 23 }, (_, k) => ({ x: k, y: Math.exp(-lambda) * lambda ** k / factorial(k) }));
+  if (type === "normal") return Array.from({ length: 121 }, (_, i) => { const x = mu - 4 * sigma + i * (8 * sigma / 120); return { x, y: Math.exp(-0.5 * ((x - mu) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI)) }; });
+  return Array.from({ length: 121 }, (_, i) => ({ x: -1 + i / 60, y: i >= 30 && i <= 90 ? 1 : 0 }));
 }
+function DistributionExplorer() {
+  const [type, setType] = useState<Dist>("binomial");
+  const [n, setN] = useState(12);
+  const [p, setP] = useState(0.5);
+  const [mu, setMu] = useState(0);
+  const [sigma, setSigma] = useState(1);
+  const [lambda, setLambda] = useState(4);
+  const info = distributionInfo[type];
+  const data = useMemo(() => points(type, n, p, mu, sigma, lambda), [type, n, p, mu, sigma, lambda]);
+  const max = Math.max(...data.map(point => point.y), 0.001) * 1.12;
+  const xMin = data[0].x, xMax = data[data.length - 1].x;
+  const px = (x: number) => 36 + (x - xMin) / (xMax - xMin || 1) * 648;
+  const py = (y: number) => 224 - y / max * 190;
+  const discrete = type === "binomial" || type === "poisson";
+  const line = data.map((point, i) => (i ? "L" : "M") + px(point.x).toFixed(2) + " " + py(point.y).toFixed(2)).join(" ");
+  const area = line + " L684 224 L36 224 Z";
+  return <section className="pw-playground" id="explore">
+    <div className="pw-playgroundHead"><div><span className="pw-kicker">EXPLORE / 01</span><h2>分布を、動かしてみよう。</h2><p>パラメータを変えると、確率のかたちはどう変わる？</p></div><span className="pw-live">● INTERACTIVE</span></div>
+    <div className="pw-explorer">
+      <div className="pw-explorerSidebar"><span className="pw-smallTitle">分布を選ぶ</span><div className="pw-distButtons">{(Object.keys(distributionInfo) as Dist[]).map(key => <button key={key} type="button" className={type === key ? "pw-selected" : ""} aria-pressed={type === key} onClick={() => setType(key)}>{distributionInfo[key].name}<span>→</span></button>)}</div><div className="pw-parameters"><span className="pw-smallTitle">パラメータを調整</span>{type === "binomial" && <><label>試行回数 n <b>{n}</b><input type="range" min="2" max="30" value={n} onChange={event => setN(Number(event.target.value))}/></label><label>成功確率 p <b>{p.toFixed(2)}</b><input type="range" min="0.05" max="0.95" step="0.05" value={p} onChange={event => setP(Number(event.target.value))}/></label></>}{type === "normal" && <><label>平均 μ <b>{mu}</b><input type="range" min="-3" max="3" step="0.5" value={mu} onChange={event => setMu(Number(event.target.value))}/></label><label>標準偏差 σ <b>{sigma.toFixed(1)}</b><input type="range" min="0.5" max="3" step="0.25" value={sigma} onChange={event => setSigma(Number(event.target.value))}/></label></>}{type === "poisson" && <label>平均発生回数 λ <b>{lambda.toFixed(1)}</b><input type="range" min="0.5" max="12" step="0.5" value={lambda} onChange={event => setLambda(Number(event.target.value))}/></label>}{type === "uniform" && <p className="pw-sideNote">区間 [−0.5, 0.5] の一様分布です。</p>}</div></div>
+      <div className="pw-visual"><div className="pw-visualTop"><div><span>{info.subtitle}</span><h3>{info.name}</h3></div><code>{info.formula}</code></div><div className="pw-graph"><svg viewBox="0 0 720 270" preserveAspectRatio="none" role="img" aria-label={info.name + "の確率分布のグラフ"}><line x1="36" y1="224" x2="684" y2="224" stroke="#bdcad6" strokeWidth="1.5"/>{[0.25,0.5,0.75,1].map(t => <line key={t} x1="36" y1={py(max*t)} x2="684" y2={py(max*t)} stroke="#edf0f4" strokeDasharray="5 6"/>)}{discrete ? data.map(point => <rect key={point.x} x={px(point.x)-Math.min(16, 320/data.length)} y={py(point.y)} width={Math.min(32, 640/data.length)} height={Math.max(0,224-py(point.y))} rx="3" fill={info.color} opacity=".86"/>) : <><path d={area} fill={info.color} fillOpacity=".14"/><path d={line} fill="none" stroke={info.color} strokeWidth="3.5" strokeLinejoin="round"/></>}<text x="36" y="250" fill="#718096" fontSize="14">{xMin.toFixed(type === "normal" ? 1 : 0)}</text><text x="684" y="250" textAnchor="end" fill="#718096" fontSize="14">{xMax.toFixed(type === "normal" ? 1 : 0)}</text></svg></div><div className="pw-visualNote"><span className="pw-noteIcon">✦</span>{info.description}</div></div>
+    </div>
+  </section>;
+}
+const catalog: { tag: string; title: string; text: string; icon: string; type: Dist }[] = [
+  { tag: "DISCRETE", title: "二項分布", text: "コイン投げなど成功回数の分布", icon: "◕", type: "binomial" },
+  { tag: "CONTINUOUS", title: "正規分布", text: "身の回りに現れる釣り鐘型", icon: "∩", type: "normal" },
+  { tag: "DISCRETE", title: "ポアソン分布", text: "一定時間に起こる出来事の数", icon: "∴", type: "poisson" },
+  { tag: "CONTINUOUS", title: "一様分布", text: "どの値も同じように現れる", icon: "▰", type: "uniform" }
+];
+function Home() {
+  return <div className="pw"><header className="pw-header"><a className="pw-logo" href="#top"><span>◈</span><strong>確率の世界</strong><small>PROBABILITY WORLD</small></a><nav aria-label="サイトナビゲーション"><a href="#explore">分布を探索</a><a href="#catalog">分布図鑑</a><a href="#laboratory">実験室</a><a href="#learning">学ぶ</a></nav><a className="pw-headerCta" href="#explore">探索をはじめる ↗</a></header><main id="top">
+    <section className="pw-hero"><div className="pw-heroText"><div className="pw-eyebrow"><span>✦</span> DISCOVER THE PATTERNS IN CHANCE</div><h1>確率は、<br/><em>見えると</em>おもしろい。</h1><p className="pw-lead">確率を、見て・動かして・発見する。</p><p className="pw-herodesc">数式の向こうにある、意外な規則性。<br/>グラフを動かし、実験しながら、確率と統計の世界を探検しよう。</p><div className="pw-heroActions"><a className="pw-button" href="#explore">分布を動かしてみる <span>↗</span></a><a className="pw-textButton" href="#catalog">分布図鑑を見る　→</a></div><div className="pw-heroFoot"><span>SCROLL TO DISCOVER</span><span>↓</span></div></div><div className="pw-heroArt" aria-hidden="true"><svg viewBox="0 0 560 420"><defs><linearGradient id="pwGradient" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#7a83ff"/><stop offset="1" stopColor="#2ad5bc"/></linearGradient></defs>{[1,2,3,4].map(i=><ellipse key={i} cx="288" cy="220" rx={170+i*32} ry={98+i*24} fill="none" stroke="#b8c5e9" opacity=".11" transform="rotate(-22 288 220)"/>)}{Array.from({length:46},(_,i)=>{const x=50+i*10;const v=Math.exp(-.5*((x-285)/90)**2);return <rect key={i} x={x} y={327-v*240} width="6" height={v*240} rx="3" fill="url(#pwGradient)" opacity={.35+.65*v}/>})}<path d="M45 327 C130 327 170 92 285 86 C400 92 445 327 526 327" fill="none" stroke="#d5e0ff" strokeWidth="3"/><circle cx="285" cy="86" r="7" fill="#42d7c1"/><circle cx="285" cy="86" r="18" fill="none" stroke="#42d7c1" opacity=".45"/><text x="70" y="58" fill="#aebddd" fontSize="16">P(X)</text><text x="458" y="361" fill="#aebddd" fontSize="16">X →</text></svg><div className="pw-artBadge"><span>THE NORMAL CURVE</span><strong>μ = 0　σ = 1</strong></div></div></section>
+    <div className="pw-statstrip"><span>確率分布をもっと直感的に</span><span><b>01</b> 見る</span><span><b>02</b> 動かす</span><span><b>03</b> 発見する</span></div>
+    <DistributionExplorer/>
+    <section className="pw-section" id="catalog"><div className="pw-sectionHeader"><div><span className="pw-kicker">DISTRIBUTION LIBRARY / 02</span><h2>確率分布の図鑑</h2><p>分布の特徴を知れば、現実の見え方が変わる。</p></div><a href="#explore" className="pw-subtleLink">すべて探索する ↗</a></div><div className="pw-catalog">{catalog.map((item,i)=><a key={item.type} href="#explore" className="pw-catalogCard" onClick={()=>{ /* Scroll to the interactive graph; selection remains user controlled. */ }}><div className={"pw-catalogVisual pw-v"+i}><span>{item.icon}</span></div><div className="pw-catalogBody"><small>{item.tag}</small><h3>{item.title}<span>↗</span></h3><p>{item.text}</p></div></a>)}</div></section>
+    <section className="pw-section pw-labSection" id="laboratory"><div className="pw-labIntro"><span className="pw-kicker">EXPERIMENT LAB / 03</span><h2>やってみると、<br/>わかってくる。</h2><p>何度も繰り返すことで見えてくる、確率の不思議。自分の手で実験して、結果を確かめてみよう。</p><a className="pw-button" href="?experiment=dice">サイコロ実験を開く <span>↗</span></a></div><div className="pw-labCard"><div className="pw-labCardHeader"><span>EXPERIMENT 001</span><span className="pw-live">● 体験できます</span></div><div className="pw-labDice" aria-hidden="true">⚄ <span>⚂</span> ⚅</div><h3>サイコロと大数の法則</h3><p>振る回数を増やすと、6つの目の割合はどうなる？</p><a href="?experiment=dice">実験してみる →</a></div></section>
+    <section className="pw-section pw-learning" id="learning"><div className="pw-sectionHeader"><div><span className="pw-kicker">LEARNING PATH / 04</span><h2>学びを、少しずつ深めよう。</h2><p>難しい数式からではなく、体験から理解へ。</p></div></div><div className="pw-learningGrid"><article><span>01 / START</span><div>◎</div><h3>確率って何だろう？</h3><p>起こりやすさを数字で表す基本の考え方。</p></article><article><span>02 / EXPLORE</span><div>⌁</div><h3>確率分布を知る</h3><p>二項分布や正規分布の形を比較しよう。</p></article><article><span>03 / DISCOVER</span><div>∑</div><h3>大数の法則を感じる</h3><p>実験を重ねると結果が安定する理由。</p></article></div><div className="pw-upcoming"><span>COMING SOON</span> 中心極限定理の実験・コイン投げ・動画ライブラリは、今後追加予定です。</div></section>
+  </main><footer className="pw-footer"><strong>◈ 確率の世界</strong><span>確率を、見て・動かして・発見する。</span><small>PROBABILITY WORLD</small></footer></div>;
+}
+export default function App() { return new URLSearchParams(window.location.search).get("experiment") === "dice" ? <DiceLab/> : <Home/>; }

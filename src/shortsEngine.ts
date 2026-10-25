@@ -1,12 +1,13 @@
 import {
   DEFAULT_PARAMS, empiricalStats, makeHistogram, simulate, theoreticalStats,
-  type Bin, type LabKind, type LabParams, type Trial
+  type LabKind, type LabParams, type Trial
 } from "./simulations";
 
 export const VIDEO_WIDTH = 720;
 export const VIDEO_HEIGHT = 1280;
 export const VIDEO_FPS = 24;
 export const VIDEO_DURATIONS = [15, 30] as const;
+export const LAB_ORDER: LabKind[] = ["coin", "normal", "arrivals", "wait", "tails"];
 export type VideoDuration = (typeof VIDEO_DURATIONS)[number];
 export type StoryPhase = "hook" | "phenomenon" | "distribution" | "discovery";
 
@@ -113,7 +114,13 @@ export function createVideoStory(kind: LabKind, params: LabParams = DEFAULT_PARA
   const source = Array.from({ length: sampleCount }, () => simulate(kind, params, rng));
   return {
     kind, params: { ...params }, seed, samples: source.map(item => ({ value: item.value, details: [] })),
-    examples: source.slice(0, 10), script: SHORT_SCRIPTS[kind], theoretical: theoreticalStats(kind, params)
+    examples: source.slice(0, 10), script: {
+      ...SHORT_SCRIPTS[kind],
+      title: kind === "coin" ? `コイン${params.flips}回で、表は何回？`
+        : kind === "arrivals" ? `平均${params.rate}人の店、今日は何人？`
+        : kind === "wait" ? `平均${(60 / params.rate).toFixed(0)}分待ち。毎回同じ？`
+        : SHORT_SCRIPTS[kind].title
+    }, theoretical: theoreticalStats(kind, params)
   };
 }
 export function createVideoScript(story: VideoStory, duration: VideoDuration): string {

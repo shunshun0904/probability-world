@@ -55,7 +55,7 @@ export function tailSurvival(x: number, params: LabParams): number {
 export function simulate(kind: LabKind, params: LabParams, rng: () => number = Math.random): Trial {
   switch (kind) {
     case "coin": {
-      const details = Array.from({ length: params.flips }, () => unit(rng) < params.probability ? 1 : 0);
+      const details: number[] = Array.from({ length: params.flips }, () => unit(rng) < params.probability ? 1 : 0);
       return { value: details.reduce((total, x) => total + x, 0), details };
     }
     case "normal": {

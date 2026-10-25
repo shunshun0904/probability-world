@@ -3,6 +3,7 @@ import {
   DEFAULT_PARAMS, MAX_TRIALS, empiricalStats, makeHistogram, simulate, tailSurvival,
   theoreticalStats, type LabKind, type LabParams, type Trial
 } from "./simulations";
+import { studioUrl } from "./shortsRoutes";
 import "./phenomena.css";
 
 type LabDescription = {
@@ -148,7 +149,7 @@ export default function PhenomenaLab({kind}: {kind:LabKind}) {
   const tailFrequency=kind==="tails" && trials.length ? trials.filter(trial=>trial.value>=300).length/trials.length:0;
   const replayText=trials.length===0 ? "まだ実験を始めていません。最初のセットを実行してみましょう。" : trials.length<100 ? "試行回数が少ない間は、実測値と理論値に差が出ます。もっと繰り返してみましょう。" : "たくさん繰り返すと、実測分布は理論上の形に近づく傾向があります。毎回の結果が予測できるわけではありません。";
   return <div className={"ph-page"+(videoMode?" ph-videoMode":"")} style={{"--ph-accent":config.color} as CSSProperties}>
-    <header className="ph-header"><a href={window.location.pathname} className="ph-logo">◈ <strong>確率の世界</strong><span>PROBABILITY WORLD</span></a><div className="ph-headerActions"><a href={window.location.pathname+"#phenomena"}>← 実験一覧に戻る</a><button type="button" onClick={()=>setVideoMode(v=>!v)} aria-pressed={videoMode}>{videoMode?"通常表示に戻す":"▣ 動画素材モード"}</button></div></header>
+    <header className="ph-header"><a href={window.location.pathname} className="ph-logo">◈ <strong>確率の世界</strong><span>PROBABILITY WORLD</span></a><div className="ph-headerActions"><a href={window.location.pathname+"#phenomena"}>← 実験一覧に戻る</a><a href={studioUrl(kind,params)}>◧ 動画を生成 ↗</a><button type="button" onClick={()=>setVideoMode(v=>!v)} aria-pressed={videoMode}>{videoMode?"通常表示に戻す":"▣ 動画素材モード"}</button></div></header>
     <main><section className="ph-intro"><div className="ph-introText"><span className="ph-eyebrow">EXPERIMENT LAB　/　{String(LAB_ORDER.indexOf(kind)+1).padStart(2,"0")}</span><h1>{config.phenomenon}</h1><p>{config.intro}</p><span className="ph-formula">{config.formula}</span></div><div className="ph-introSymbol" aria-hidden="true">{config.symbol}</div></section>
       <div className="ph-content"><div className="ph-labHeader"><div><span className="ph-overline">SIMULATE & DISCOVER</span><h2>{config.title}</h2><p>{config.hint}</p></div><div className="ph-runningIndicator"><span className={running?"ph-pulse":""}/> {running?"RUNNING":"INTERACTIVE"}</div></div>
         <div className="ph-labGrid"><aside className="ph-controls"><div className="ph-controlHeading"><span>01</span><strong>条件を決める</strong></div>
@@ -166,7 +167,7 @@ export default function PhenomenaLab({kind}: {kind:LabKind}) {
           <div className="ph-stats"><div><span>試行セット数</span><strong>{trials.length.toLocaleString("ja-JP")}</strong></div><div><span>実測平均</span><strong>{trials.length ? fmt(actual.mean) : "—"}</strong></div><div><span>実測分散</span><strong>{trials.length ? fmt(actual.variance) : "—"}</strong></div>{kind==="tails"&&<div><span>300万円以上</span><strong>{trials.length ? pct(tailFrequency) : "—"}</strong></div>}</div><p className="ph-chartInsight"><span>✦</span>{replayText}</p>
         </div></div>
         <section className="ph-explain"><div><span className="ph-overline">04 / UNDERSTAND THE MODEL</span><h2>なぜ、こんな形になるの？</h2><p>{config.observation}</p><div className="ph-modelNotice"><strong>モデルの前提</strong><p>{config.model}</p></div></div><div className="ph-question"><span className="ph-overline">PREDICTION QUIZ</span><h3>{config.challenge}</h3><div className="ph-quizAnswers"><button onClick={()=>setQuiz("correct")}>{config.answer}</button><button onClick={()=>setQuiz("wrong")}>{config.wrongAnswer}</button></div>{quiz&&<div className={"ph-answer "+(quiz==="correct"?"ph-correct":"ph-incorrect")}><strong>{quiz==="correct"?"その通り！":"もう一度考えてみよう"}</strong><p>{config.explanation}</p></div>}</div></section>
-        <section className="ph-short"><div><span className="ph-overline">FROM LAB TO SHORT VIDEO</span><h2>この実験を、30秒の動画に。</h2><p>同じシミュレーションから、ショート動画の構成を作れます。上部の「動画素材モード」は画面収録に適した表示です（動画ファイルの自動出力は未対応）。</p></div><div className="ph-shortFrames"><div><span>0–5 SEC</span><strong>{config.shortHook}</strong></div><div><span>5–20 SEC</span><strong>条件を変えて、実験を繰り返す</strong></div><div><span>20–30 SEC</span><strong>{config.shortReveal}</strong></div></div></section>
+        <section className="ph-short"><div><span className="ph-overline">FROM LAB TO SHORT VIDEO</span><h2>この実験を、30秒の動画に。</h2><p>この実験の条件をそのまま使い、現象・試行・分布・発見を15秒または30秒の縦型動画にできます。プレビューを見てからWebMまたはMP4形式で保存できます。</p><a className="ph-studioLink" href={studioUrl(kind,params)}>◧ ショート動画スタジオを開く ↗</a></div><div className="ph-shortFrames"><div><span>0–5 SEC</span><strong>{config.shortHook}</strong></div><div><span>5–20 SEC</span><strong>条件を変えて、実験を繰り返す</strong></div><div><span>20–30 SEC</span><strong>{config.shortReveal}</strong></div></div></section>
         <div className="ph-next"><span>次の実験もしてみよう</span><div>{LAB_ORDER.filter(item=>item!==kind).map(item=><a key={item} href={"?lab="+item}>{LABS[item].title} ↗</a>)}</div></div>
       </div></main><footer className="ph-footer"><a href={window.location.pathname}>◈ 確率の世界</a><span>確率を、見て・動かして・発見する。</span></footer>
   </div>;

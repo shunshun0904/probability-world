@@ -26,7 +26,7 @@ export function parseStudioQuery(search: string): { kind: LabKind; params: LabPa
 }
 export function parseStudioSeed(search: string): number {
   const raw = new URLSearchParams(search).get("seed");
-  if (raw === null || !/^\\d+$/.test(raw)) return 20261025;
+  if (raw === null || !/^[0-9]+$/.test(raw)) return 20261025;
   const parsed = Number(raw);
   return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 0xFFFFFFFF ? parsed : 20261025;
 }

@@ -24,8 +24,14 @@ export function parseStudioQuery(search: string): { kind: LabKind; params: LabPa
   params.tailModel=query.get("tailModel")==="pareto"?"pareto":"lognormal";
   return { kind,params };
 }
-export function studioUrl(kind: LabKind, params: LabParams): string {
-  const query=new URLSearchParams({studio:kind});
+export function parseStudioSeed(search: string): number {
+  const raw = new URLSearchParams(search).get("seed");
+  if (raw === null || !/^[0-9]+$/.test(raw)) return 20261025;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 0xFFFFFFFF ? parsed : 20261025;
+}
+export function studioUrl(kind: LabKind, params: LabParams, seed = 20261025): string {
+  const query=new URLSearchParams({studio:kind,seed:String(seed >>> 0)});
   const fields: Array<keyof LabParams> = kind==="coin" ? ["flips","probability"] :
     kind==="normal"?["steps"]:kind==="arrivals"?["rate","minutes"]:
     kind==="wait"?["rate"]:["tailModel","sigma","alpha"];

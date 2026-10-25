@@ -4,7 +4,7 @@ import {
   createVideoScript, createVideoStory, phaseAt, seededRandom,
   VIDEO_HEIGHT, VIDEO_WIDTH, visibleSampleCount, wrapText
 } from "./shortsEngine";
-import { parseStudioQuery, studioUrl } from "./shortsRoutes";
+import { parseStudioQuery, parseStudioSeed, studioUrl } from "./shortsRoutes";
 import { pickVideoFormat } from "./shortsRecorder";
 
 describe("Shorts studio storyboard engine", () => {
@@ -55,6 +55,14 @@ describe("Shorts studio storyboard engine", () => {
     expect(invalid.params.minutes).toBe(15);
     expect(invalid.params.sigma).toBe(DEFAULT_PARAMS.sigma);
     expect(invalid.params.alpha).toBe(1.2);
+  });
+  it("preserves the video random seed when sharing a URL", () => {
+    const params = { ...DEFAULT_PARAMS, probability: 0.6 };
+    const url = studioUrl("coin", params, 987654);
+    expect(parseStudioQuery(url).params.probability).toBeCloseTo(0.6);
+    expect(parseStudioSeed(url)).toBe(987654);
+    expect(parseStudioSeed("?studio=coin&seed=not-a-number")).toBe(20261025);
+    expect(parseStudioSeed("?studio=coin&seed=4294967296")).toBe(20261025);
   });
   it("picks supported formats without falsely assuming MP4 support", () => {
     expect(pickVideoFormat(mime=>mime.includes("webm"))?.extension).toBe("webm");
